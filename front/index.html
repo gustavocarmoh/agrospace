@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>AgroSpace Monitor</title>
+
+  <link rel="stylesheet" href="./style.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+</head>
+<body>
+
+  <!-- todo seu HTML -->
+<div class="asm-root">
+  <div class="asm-header">
+    <div class="asm-logo">
+      <div class="asm-logo-icon">🌱</div>
+      <div>
+        <div class="asm-logo-text">AgroSpace Monitor</div>
+        <div class="asm-logo-sub">Estação Lunar Alpha — GS1 / FIAP Startup One</div>
+      </div>
+    </div>
+    <div class="asm-status-bar">
+      <div class="asm-status-dot"></div>
+      <span class="conn-status conn-online">ESP32 ONLINE</span>
+      <span class="asm-clock" id="asm-clock">--:--:--</span>
+    </div>
+  </div>
+
+  <div class="asm-tabs">
+    <button class="asm-tab active" onclick="switchTab('dashboard')">Dashboard</button>
+    <button class="asm-tab" onclick="switchTab('sensores')">Sensores</button>
+    <button class="asm-tab" onclick="switchTab('alertas')">Alertas <span id="alert-badge" style="background:#e03a3a;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;">3</span></button>
+    <button class="asm-tab" onclick="switchTab('ia')">IA — Manejo</button>
+  </div>
+
+  <div class="asm-body">
+
+    <!-- DASHBOARD -->
+    <div class="asm-section active" id="sec-dashboard">
+      <div class="metrics-grid">
+        <div class="metric-card ok">
+          <div class="metric-label">Temperatura Média</div>
+          <div class="metric-value" id="m-temp">24.3<span class="metric-unit">°C</span></div>
+          <div class="metric-trend up">↑ +0.4° última hora</div>
+        </div>
+        <div class="metric-card warn">
+          <div class="metric-label">Umidade Média</div>
+          <div class="metric-value" id="m-hum">58<span class="metric-unit">%</span></div>
+          <div class="metric-trend down">↓ -6% — abaixo do ideal</div>
+        </div>
+        <div class="metric-card danger">
+          <div class="metric-label">Setores em Risco</div>
+          <div class="metric-value" id="m-risk">2<span class="metric-unit"> /8</span></div>
+          <div class="metric-trend stable">⚠ Requer atenção imediata</div>
+        </div>
+        <div class="metric-card info">
+          <div class="metric-label">Irrigação Ativa</div>
+          <div class="metric-value" id="m-irr">3<span class="metric-unit"> set</span></div>
+          <div class="metric-trend stable">Ciclo 14h32 ativo</div>
+        </div>
+      </div>
+
+      <div class="main-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">🗺 Mapa de Setores</span>
+            <span style="font-size:10px;color:#4a6a8a;font-family:'Share Tech Mono',monospace;">Clique num setor p/ detalhes</span>
+          </div>
+          <div class="panel-body">
+            <div class="sector-map">
+              <div class="sector healthy" onclick="showSector('A')">
+                <div class="sector-icon">🌿</div>
+                <div class="sector-id">A</div>
+                <div class="sector-status">Saudável</div>
+              </div>
+              <div class="sector low-water" onclick="showSector('B')">
+                <div class="sector-icon">💧</div>
+                <div class="sector-id">B</div>
+                <div class="sector-status">Baixa Umid.</div>
+              </div>
+              <div class="sector healthy" onclick="showSector('C')">
+                <div class="sector-icon">🌿</div>
+                <div class="sector-id">C</div>
+                <div class="sector-status">Saudável</div>
+              </div>
+              <div class="sector risk" onclick="showSector('D')">
+                <div class="sector-icon">⚠</div>
+                <div class="sector-id">D</div>
+                <div class="sector-status">Risco Contam.</div>
+              </div>
+              <div class="sector healthy" onclick="showSector('E')">
+                <div class="sector-icon">🌿</div>
+                <div class="sector-id">E</div>
+                <div class="sector-status">Saudável</div>
+              </div>
+              <div class="sector low-water" onclick="showSector('F')">
+                <div class="sector-icon">💧</div>
+                <div class="sector-id">F</div>
+                <div class="sector-status">Irrigar</div>
+              </div>
+              <div class="sector risk" onclick="showSector('G')">
+                <div class="sector-icon">🚨</div>
+                <div class="sector-id">G</div>
+                <div class="sector-status">Temp. Alta</div>
+              </div>
+              <div class="sector idle" onclick="showSector('H')">
+                <div class="sector-icon">🔵</div>
+                <div class="sector-id">H</div>
+                <div class="sector-status">Em Espera</div>
+              </div>
+            </div>
+            <div class="legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#1ddb8a"></div>Saudável</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#f0a500"></div>Baixa umidade</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#e03a3a"></div>Risco</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#1a3a5c"></div>Inativo</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">📈 Temperatura (6h)</span>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap">
+              <canvas id="tempChart" role="img" aria-label="Gráfico de temperatura dos últimos 6 horas">Temperatura oscilou entre 22 e 28 graus Celsius nas últimas 6 horas.</canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="main-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">💧 Umidade por Setor</span>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap" style="height:150px">
+              <canvas id="humChart" role="img" aria-label="Gráfico de barras de umidade por setor A até H">Umidade varia por setor, com B e F abaixo do limite ideal de 60%.</canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">🔔 Alertas Recentes</span>
+          </div>
+          <div class="panel-body">
+            <div class="alerts-list">
+              <div class="alert-item danger">
+                <i class="ti ti-alert-triangle alert-icon" aria-hidden="true"></i>
+                <div>
+                  <div class="alert-msg">Contaminação detectada no Setor D — pH fora do range (pH 8.9)</div>
+                  <div class="alert-time">14:32:10 — SENSOR-D01</div>
+                </div>
+              </div>
+              <div class="alert-item warn">
+                <i class="ti ti-droplet-off alert-icon" aria-hidden="true"></i>
+                <div>
+                  <div class="alert-msg">Setor B com umidade crítica: 38% (mínimo: 55%)</div>
+                  <div class="alert-time">14:28:47 — SENSOR-B02</div>
+                </div>
+              </div>
+              <div class="alert-item danger">
+                <i class="ti ti-temperature alert-icon" aria-hidden="true"></i>
+                <div>
+                  <div class="alert-msg">Temperatura elevada no Setor G: 34.1°C (máximo: 30°C)</div>
+                  <div class="alert-time">14:21:03 — SENSOR-G01</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SENSORES -->
+    <div class="asm-section" id="sec-sensores">
+      <div class="sensors-grid">
+        <div class="sensor-card">
+          <div class="sensor-name">🌡 TEMP — SENSOR-A01</div>
+          <div class="sensor-gauge">
+            <div class="gauge-value" style="color:#1ddb8a">22.8<span style="font-size:15px;color:#5a8ab0">°C</span></div>
+            <div style="font-size:10px;color:#5a8ab0;margin-top:4px;font-family:'Share Tech Mono',monospace">SETOR A — IDEAL</div>
+          </div>
+          <div class="gauge-bar"><div class="gauge-fill" style="width:76%;background:#1ddb8a"></div></div>
+        </div>
+        <div class="sensor-card">
+          <div class="sensor-name">💧 UMID — SENSOR-B02</div>
+          <div class="sensor-gauge">
+            <div class="gauge-value" style="color:#f0a500">38<span style="font-size:15px;color:#5a8ab0">%</span></div>
+            <div style="font-size:10px;color:#5a8ab0;margin-top:4px;font-family:'Share Tech Mono',monospace">SETOR B — CRÍTICO</div>
+          </div>
+          <div class="gauge-bar"><div class="gauge-fill" style="width:38%;background:#f0a500"></div></div>
+        </div>
+        <div class="sensor-card">
+          <div class="sensor-name">🌡 TEMP — SENSOR-G01</div>
+          <div class="sensor-gauge">
+            <div class="gauge-value" style="color:#e03a3a">34.1<span style="font-size:15px;color:#5a8ab0">°C</span></div>
+            <div style="font-size:10px;color:#5a8ab0;margin-top:4px;font-family:'Share Tech Mono',monospace">SETOR G — ALERTA</div>
+          </div>
+          <div class="gauge-bar"><div class="gauge-fill" style="width:92%;background:#e03a3a"></div></div>
+        </div>
+        <div class="sensor-card">
+          <div class="sensor-name">⚗ pH — SENSOR-D01</div>
+          <div class="sensor-gauge">
+            <div class="gauge-value" style="color:#e03a3a">8.9<span style="font-size:15px;color:#5a8ab0"> pH</span></div>
+            <div style="font-size:10px;color:#5a8ab0;margin-top:4px;font-family:'Share Tech Mono',monospace">SETOR D — RISCO ALTO</div>
+          </div>
+          <div class="gauge-bar"><div class="gauge-fill" style="width:89%;background:#e03a3a"></div></div>
+        </div>
+        <div class="sensor-card">
+          <div class="sensor-name">💡 LUX — SENSOR-E01</div>
+          <div class="sensor-gauge">
+            <div class="gauge-value" style="color:#4ab8ff">6400<span style="font-size:15px;color:#5a8ab0"> lx</span></div>
+            <div style="font-size:10px;color:#5a8ab0;margin-top:4px;font-family:'Share Tech Mono',monospace">SETOR E — NORMAL</div>
+          </div>
+          <div class="gauge-bar"><div class="gauge-fill" style="width:64%;background:#4ab8ff"></div></div>
+        </div>
+        <div class="sensor-card">
+          <div class="sensor-name">💧 UMID — SENSOR-F01</div>
+          <div class="sensor-gauge">
+            <div class="gauge-value" style="color:#f0a500">47<span style="font-size:15px;color:#5a8ab0">%</span></div>
+            <div style="font-size:10px;color:#5a8ab0;margin-top:4px;font-family:'Share Tech Mono',monospace">SETOR F — ABAIXO DO IDEAL</div>
+          </div>
+          <div class="gauge-bar"><div class="gauge-fill" style="width:47%;background:#f0a500"></div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📡 Status dos Dispositivos</span>
+        </div>
+        <div class="panel-body">
+          <table style="width:100%;font-size:12px;border-collapse:collapse;font-family:'Share Tech Mono',monospace;">
+            <thead>
+              <tr style="border-bottom:1px solid #1a3a5c;">
+                <th style="text-align:left;padding:8px 0;color:#4a6a8a;font-weight:400;">Dispositivo</th>
+                <th style="text-align:left;padding:8px 0;color:#4a6a8a;font-weight:400;">Setor</th>
+                <th style="text-align:left;padding:8px 0;color:#4a6a8a;font-weight:400;">Tipo</th>
+                <th style="text-align:left;padding:8px 0;color:#4a6a8a;font-weight:400;">Última Leitura</th>
+                <th style="text-align:left;padding:8px 0;color:#4a6a8a;font-weight:400;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="device-table">
+              <tr style="border-bottom:1px solid #0d1625;"><td style="padding:8px 0;color:#c8d8f0;">ESP32-A01</td><td style="padding:8px 0;color:#5a8ab0;">A</td><td style="padding:8px 0;color:#5a8ab0;">Temp + Umid</td><td style="padding:8px 0;color:#5a8ab0;">há 2s</td><td style="padding:8px 0;"><span style="color:#1ddb8a;">● ONLINE</span></td></tr>
+              <tr style="border-bottom:1px solid #0d1625;"><td style="padding:8px 0;color:#c8d8f0;">ESP32-B02</td><td style="padding:8px 0;color:#5a8ab0;">B</td><td style="padding:8px 0;color:#5a8ab0;">Umidade</td><td style="padding:8px 0;color:#5a8ab0;">há 1s</td><td style="padding:8px 0;"><span style="color:#1ddb8a;">● ONLINE</span></td></tr>
+              <tr style="border-bottom:1px solid #0d1625;"><td style="padding:8px 0;color:#c8d8f0;">ESP32-D01</td><td style="padding:8px 0;color:#5a8ab0;">D</td><td style="padding:8px 0;color:#5a8ab0;">pH + Temp</td><td style="padding:8px 0;color:#5a8ab0;">há 4s</td><td style="padding:8px 0;"><span style="color:#f0a500;">● DEGRADADO</span></td></tr>
+              <tr style="border-bottom:1px solid #0d1625;"><td style="padding:8px 0;color:#c8d8f0;">ESP32-G01</td><td style="padding:8px 0;color:#5a8ab0;">G</td><td style="padding:8px 0;color:#5a8ab0;">Temp + LED</td><td style="padding:8px 0;color:#5a8ab0;">há 2s</td><td style="padding:8px 0;"><span style="color:#1ddb8a;">● ONLINE</span></td></tr>
+              <tr><td style="padding:8px 0;color:#c8d8f0;">ESP32-H01</td><td style="padding:8px 0;color:#5a8ab0;">H</td><td style="padding:8px 0;color:#5a8ab0;">Temp + Umid</td><td style="padding:8px 0;color:#5a8ab0;">há 42s</td><td style="padding:8px 0;"><span style="color:#e03a3a;">● OFFLINE</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALERTAS -->
+    <div class="asm-section" id="sec-alertas">
+      <div class="panel" style="margin-bottom:12px;">
+        <div class="panel-header"><span class="panel-title">🚨 Alertas Ativos</span></div>
+        <div class="panel-body">
+          <div class="alerts-list">
+            <div class="alert-item danger">
+              <i class="ti ti-biohazard alert-icon" aria-hidden="true"></i>
+              <div>
+                <div class="alert-msg"><strong style="color:#e03a3a">CRÍTICO</strong> — Risco de contaminação no Setor D. pH = 8.9 (faixa ideal: 6.0–7.0). Possível acúmulo de minerais marcianus.</div>
+                <div class="alert-time">14:32:10 — SENSOR-D01 — ID #ALT-2847</div>
+              </div>
+            </div>
+            <div class="alert-item danger">
+              <i class="ti ti-flame alert-icon" aria-hidden="true"></i>
+              <div>
+                <div class="alert-msg"><strong style="color:#e03a3a">CRÍTICO</strong> — Temperatura crítica no Setor G: 34.1°C. Risco de dano às raízes e murchamento das mudas.</div>
+                <div class="alert-time">14:21:03 — SENSOR-G01 — ID #ALT-2846</div>
+              </div>
+            </div>
+            <div class="alert-item warn">
+              <i class="ti ti-droplet-off alert-icon" aria-hidden="true"></i>
+              <div>
+                <div class="alert-msg"><strong style="color:#f0a500">ATENÇÃO</strong> — Setor B com umidade abaixo do mínimo: 38%. Planta pode entrar em estresse hídrico em 2h.</div>
+                <div class="alert-time">14:28:47 — SENSOR-B02 — ID #ALT-2845</div>
+              </div>
+            </div>
+            <div class="alert-item warn">
+              <i class="ti ti-droplet-off alert-icon" aria-hidden="true"></i>
+              <div>
+                <div class="alert-msg"><strong style="color:#f0a500">ATENÇÃO</strong> — Setor F com umidade reduzida: 47%. Agendar ciclo de irrigação.</div>
+                <div class="alert-time">14:15:22 — SENSOR-F01 — ID #ALT-2844</div>
+              </div>
+            </div>
+            <div class="alert-item ok">
+              <i class="ti ti-device-floppy alert-icon" aria-hidden="true"></i>
+              <div>
+                <div class="alert-msg"><strong style="color:#1ddb8a">INFO</strong> — ESP32-H01 (Setor H) offline. Último dado registrado há 42 segundos. Aguardando reconexão.</div>
+                <div class="alert-time">14:09:51 — SISTEMA — ID #ALT-2843</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IA MANEJO -->
+    <div class="asm-section" id="sec-ia">
+      <div class="ai-panel">
+        <div class="ai-header">
+          <div class="ai-badge">🤖 IA Agroespacial</div>
+          <span style="font-size:11px;color:#4a6a8a;font-family:'Share Tech Mono',monospace;">Análise baseada em regras + dados dos sensores</span>
+        </div>
+        <div class="ai-body">
+          <div class="reco-list" id="reco-list">
+            <div class="reco-item">
+              <div class="reco-priority high">URGENTE</div>
+              <div class="reco-text">
+                <div class="reco-action">Isolar e tratar Setor D imediatamente</div>
+                <div class="reco-reason">pH de 8.9 indica possível acúmulo de carbonatos. Risco de dano permanente às culturas em até 4 horas. Recomenda-se aplicação de solução ácida diluída (pH alvo: 6.5) e coleta de amostra para análise química.</div>
+                <div class="reco-sector-tag">📍 Setor D · SENSOR-D01 · Confiança: <span class="reco-confidence">94%</span></div>
+              </div>
+            </div>
+            <div class="reco-item">
+              <div class="reco-priority high">URGENTE</div>
+              <div class="reco-text">
+                <div class="reco-action">Ativar sistema de resfriamento no Setor G</div>
+                <div class="reco-reason">Temperatura de 34.1°C excede limite operacional (30°C). Ativar ventilação forçada ou cortina térmica. Monitorar taxa de descida a cada 5 minutos. Meta: ≤ 28°C em 20 min.</div>
+                <div class="reco-sector-tag">📍 Setor G · SENSOR-G01 · Confiança: <span class="reco-confidence">98%</span></div>
+              </div>
+            </div>
+            <div class="reco-item">
+              <div class="reco-priority mid">MODERADO</div>
+              <div class="reco-text">
+                <div class="reco-action">Irrigar Setor B — ciclo de 15 min</div>
+                <div class="reco-reason">Umidade em 38% com tendência de queda. Iniciar ciclo de irrigação de 15 minutos com volume de 2.4L/m². Verificar umidade após ciclo — alvo: 65–70%.</div>
+                <div class="reco-sector-tag">📍 Setor B · SENSOR-B02 · Confiança: <span class="reco-confidence">89%</span></div>
+              </div>
+            </div>
+            <div class="reco-item">
+              <div class="reco-priority mid">MODERADO</div>
+              <div class="reco-text">
+                <div class="reco-action">Agendar irrigação no Setor F para 15h00</div>
+                <div class="reco-reason">Umidade em 47%, estável, sem queda brusca. Não é emergência. Programar ciclo leve de 10 min no próximo horário de irrigação para normalizar antes da janela noturna.</div>
+                <div class="reco-sector-tag">📍 Setor F · SENSOR-F01 · Confiança: <span class="reco-confidence">82%</span></div>
+              </div>
+            </div>
+            <div class="reco-item">
+              <div class="reco-priority low">OK</div>
+              <div class="reco-text">
+                <div class="reco-action">Setores A, C, E em condições ideais</div>
+                <div class="reco-reason">Temperatura e umidade dentro dos parâmetros. Nenhuma ação necessária. Manter ciclos normais de monitoramento a cada 60 segundos.</div>
+                <div class="reco-sector-tag">📍 Setores A, C, E · Confiança: <span class="reco-confidence">97%</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-ask-bar">
+            <input type="text" id="ai-query" placeholder="Pergunte à IA: ex. 'O que fazer com o Setor D?'" />
+            <button onclick="askAI()">Analisar ↗</button>
+          </div>
+          <div id="ai-response" style="margin-top:12px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+  <script src="./app.js"></script>
+
+</body>
+</html>
