@@ -104,3 +104,14 @@ export interface Recommendation {
 export interface RecommendationsResponse {
   recommendations: Recommendation[];
 }
+
+export interface AIAnalyzeRequest {
+  query: string;
+}
+
+export interface AIAnalyzeResponse {
+  query: string;
+  recommendation: Recommendation;
+  foundSector?: string;
+  foundSensor?: string;
+}

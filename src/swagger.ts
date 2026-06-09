@@ -164,6 +164,38 @@ export const swaggerDocument = {
           }
         }
       }
+    },
+    "/api/v1/ia-manejo/analyze": {
+      post: {
+        tags: ["IA Manejo"],
+        summary: "Analisa texto de consulta e gera recomendação baseada em setor ou sensor mencionado",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  query: { type: "string", example: "O que fazer com o Setor D?" }
+                },
+                required: ["query"]
+              }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Recomendação gerada com sucesso.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 };

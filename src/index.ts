@@ -8,9 +8,10 @@ import {
   getSensors,
   getAlerts,
   getRecommendations,
+  getAiRecommendation,
   ingestTelemetry
 } from "./services/monitorService";
-import type { TelemetryRequest } from "./types";
+import type { TelemetryRequest, AIAnalyzeRequest } from "./types";
 
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -51,6 +52,16 @@ app.get("/api/v1/alerts", (_req: Request, res: Response) => {
 app.get("/api/v1/ia-manejo/recommendations", (_req: Request, res: Response) => {
   const recommendations = getRecommendations();
   return res.status(200).json(recommendations);
+});
+
+app.post("/api/v1/ia-manejo/analyze", (req: Request<unknown, unknown, AIAnalyzeRequest>, res: Response) => {
+  const payload = req.body;
+  if (!payload || typeof payload.query !== "string" || !payload.query.trim()) {
+    return res.status(400).json({ message: "Corpo de request inválido. Use { query: string }." });
+  }
+
+  const analysis = getAiRecommendation(payload.query);
+  return res.status(200).json(analysis);
 });
 
 app.use((req: Request, res: Response) => {

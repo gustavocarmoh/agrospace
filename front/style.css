@@ -234,9 +234,9 @@
   .reco-priority.mid { background: rgba(240,165,0,0.2); color: #f0a500; border: 1px solid #f0a50044; }
   .reco-priority.low { background: rgba(29,219,138,0.15); color: #1ddb8a; border: 1px solid #1ddb8a44; }
   .reco-text { flex: 1; }
-  .reco-action { font-size: 13px; font-weight: 600; color: #e0f0ff; margin-bottom: 3px; }
-  .reco-reason { font-size: 11px; color: #5a8ab0; line-height: 1.5; }
-  .reco-sector-tag { font-size: 10px; font-family: 'Share Tech Mono', monospace; color: #4a6a8a; margin-top: 4px; }
+  .reco-action { font-size: 13px; font-weight: 600; color: #e0f0ff; margin-bottom: 3px; word-break: break-word; overflow-wrap: anywhere; }
+  .reco-reason { font-size: 11px; color: #5a8ab0; line-height: 1.5; word-break: break-word; overflow-wrap: anywhere; }
+  .reco-sector-tag { font-size: 10px; font-family: 'Share Tech Mono', monospace; color: #4a6a8a; margin-top: 4px; word-break: break-word; overflow-wrap: anywhere; }
   .reco-confidence { font-size: 10px; color: #1ddb8a88; float: right; font-family: 'Share Tech Mono', monospace; }
 
   .ai-ask-bar { display: flex; gap: 8px; margin-top: 16px; }

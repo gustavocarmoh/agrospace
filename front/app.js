@@ -1,5 +1,18 @@
 const API_BASE = 'http://localhost:3000/api/v1';
 
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function nl2br(text) {
+  return escapeHtml(text).replace(/\n/g, '<br/>');
+}
+
 function switchTab(name) {
   document.querySelectorAll('.asm-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.asm-section').forEach(s => s.classList.remove('active'));
@@ -318,13 +331,18 @@ async function loadRecommendations() {
     recoList.innerHTML = data.recommendations.map(rec => {
       const priorityMap = { URGENTE: 'high', MODERADO: 'mid', NORMAL: 'low' };
       const priorityClass = priorityMap[rec.priority] || 'mid';
+      const safeTitle = escapeHtml(rec.title);
+      const safeDescription = escapeHtml(rec.description);
+      const safeSector = escapeHtml(rec.targetSector);
+      const safeSensor = escapeHtml(rec.sensorId);
+      const safeConfidence = escapeHtml(String(rec.confidence));
       
       return `<div class="reco-item">
-        <div class="reco-priority ${priorityClass}">${rec.priority}</div>
+        <div class="reco-priority ${priorityClass}">${escapeHtml(rec.priority)}</div>
         <div class="reco-text">
-          <div class="reco-action">${rec.title}</div>
-          <div class="reco-reason">${rec.description}</div>
-          <div class="reco-sector-tag">📍 ${rec.targetSector} · ${rec.sensorId} · Confiança: <span class="reco-confidence">${rec.confidence}%</span></div>
+          <div class="reco-action">${safeTitle}</div>
+          <div class="reco-reason">${safeDescription}</div>
+          <div class="reco-sector-tag">📍 ${safeSector} · ${safeSensor} · Confiança: <span class="reco-confidence">${safeConfidence}%</span></div>
         </div>
       </div>`;
     }).join('');
@@ -335,37 +353,28 @@ async function loadRecommendations() {
 }
 
 async function askAI() {
-  const q = document.getElementById('ai-query').value.trim();
+  const qEl = document.getElementById('ai-query');
+  if (!qEl) return;
+
+  const q = qEl.value.trim();
   if (!q) return;
-  const resp = document.getElementById('ai-response');
-  resp.innerHTML = '<div style="color:#4a6a8a;font-size:12px;font-family:\'Share Tech Mono\',monospace;padding:12px;border:1px solid #1a3a5c;border-radius:8px;">⏳ Analisando dados dos sensores...</div>';
 
   try {
-    const sensorsRes = await fetch(`${API_BASE}/sensors`);
-    const sensorsData = await sensorsRes.json();
-    
-    let sensorContext = 'Dados atuais dos sensores AgroSpace Monitor:\n';
-    sensorsData.liveSensors.forEach(s => {
-      sensorContext += `- Setor ${s.sector}: ${s.type}=${s.value}${s.unit} (${s.status})\n`;
-    });
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(`${API_BASE}/ia-manejo/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1000,
-        system: `Você é o sistema de IA agroespacial do AgroSpace Monitor, uma plataforma de monitoramento agrícola para futuras bases lunares e marcianas. Analise os dados dos sensores IoT e responda com recomendações práticas e objetivas de manejo agrícola espacial. Seja direto, técnico e conciso. Use emojis de forma sparingly. Responda sempre em português.`,
-        messages: [{ role: 'user', content: `${sensorContext}\n\nPergunta do operador: ${q}` }]
-      })
+      body: JSON.stringify({ query: q })
     });
-    const data = await response.json();
-    const text = data.content?.[0]?.text || 'Sem resposta.';
-    resp.innerHTML = `<div style="background:#0d1625;border:1px solid #1ddb8a33;border-radius:8px;padding:14px;font-size:12px;line-height:1.7;color:#c8d8f0;white-space:pre-wrap;">${text}</div>`;
-  } catch(e) {
-    resp.innerHTML = '<div style="color:#e03a3a;font-size:12px;padding:10px;border:1px solid #e03a3a33;border-radius:8px;">Erro ao conectar com a IA. Verifique a chave de API ou conexão. (Deixe em branco para usar apenas análise local.)</div>';
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    await response.json();
+
+    await loadRecommendations();
+  } catch (e) {
+    console.error('Erro na análise de IA:', e);
   }
-  document.getElementById('ai-query').value = '';
+
+  qEl.value = '';
 }
 
 document.getElementById('ai-query').addEventListener('keydown', e => {
