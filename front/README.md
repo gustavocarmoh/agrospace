@@ -6,7 +6,7 @@ O frontend foi atualizado para consumir dados em tempo real do backend Node.js/E
 
 1. **Inicie o backend:**
    ```bash
-   cd /home/mitred/faculdade/agro
+   cd /agro
    npm install
    npm run dev
    ```
