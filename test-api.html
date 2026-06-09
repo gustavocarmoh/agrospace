@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Test API Endpoints</title>
+  <style>
+    body { font-family: monospace; background: #0d1625; color: #c8d8f0; padding: 20px; }
+    .endpoint { margin: 20px 0; border: 1px solid #1ddb8a; padding: 15px; border-radius: 4px; }
+    .label { color: #1ddb8a; font-weight: bold; margin-bottom: 10px; }
+    .data { background: #1a2a3a; padding: 10px; margin-top: 10px; border-radius: 4px; overflow-x: auto; }
+    .error { color: #e03a3a; border-color: #e03a3a; }
+    .success { border-color: #1ddb8a; }
+  </style>
+</head>
+<body>
+  <h1>🧪 AgroSpace Monitor API Test</h1>
+  <p>Testar endpoints do backend. O backend deve estar rodando em http://localhost:3000</p>
+
+  <div class="endpoint success" id="summary">
+    <div class="label">GET /api/v1/dashboard/summary</div>
+    <div class="data" id="summary-data">Carregando...</div>
+  </div>
+
+  <div class="endpoint success" id="history">
+    <div class="label">GET /api/v1/dashboard/historical-temperature</div>
+    <div class="data" id="history-data">Carregando...</div>
+  </div>
+
+  <div class="endpoint success" id="sensors">
+    <div class="label">GET /api/v1/sensors</div>
+    <div class="data" id="sensors-data">Carregando...</div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:3000/api/v1';
+
+    async function testEndpoint(name, url, elementId) {
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        document.getElementById(elementId).textContent = JSON.stringify(data, null, 2);
+        console.log(`✓ ${name}:`, data);
+      } catch (e) {
+        document.getElementById(elementId).textContent = `❌ Erro: ${e.message}`;
+        document.getElementById(name).classList.add('error');
+        console.error(`✗ ${name}:`, e);
+      }
+    }
+
+    testEndpoint('summary', `${API}/dashboard/summary`, 'summary-data');
+    testEndpoint('history', `${API}/dashboard/historical-temperature`, 'history-data');
+    testEndpoint('sensors', `${API}/sensors`, 'sensors-data');
+  </script>
+</body>
+</html>

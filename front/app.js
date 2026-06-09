@@ -28,8 +28,11 @@ updateClock();
 
 async function loadDashboard() {
   try {
+    console.log('Loading dashboard from', `${API_BASE}/dashboard/summary`);
     const res = await fetch(`${API_BASE}/dashboard/summary`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    console.log('Dashboard data loaded:', data);
     
     document.getElementById('m-temp').innerHTML = data.metrics.averageTemperature.value + '<span class="metric-unit">°C</span>';
     document.getElementById('m-hum').innerHTML = data.metrics.averageHumidity.value + '<span class="metric-unit">%</span>';
@@ -41,6 +44,10 @@ async function loadDashboard() {
     updateHumidityChart(data.humidityBySector);
   } catch (e) {
     console.error('Erro ao carregar dashboard:', e);
+    const dashboardSection = document.getElementById('sec-dashboard');
+    if (dashboardSection) {
+      dashboardSection.innerHTML += `<div style="color:#e03a3a;font-size:12px;padding:12px;border:1px solid #e03a3a;border-radius:4px;margin-top:12px;">⚠ Erro ao conectar com o backend. Verifique se está rodando em http://localhost:3000</div>`;
+    }
   }
 }
 
@@ -64,10 +71,17 @@ function updateSectorMap(sectors) {
 
 function updateTemperatureChart(dashData) {
   fetch(`${API_BASE}/dashboard/historical-temperature`)
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
     .then(histData => {
+      console.log('Temperature history loaded:', histData);
       const tempCtx = document.getElementById('tempChart');
-      if (!tempCtx) return;
+      if (!tempCtx) {
+        console.warn('tempChart element not found');
+        return;
+      }
       
       const ctx = tempCtx.getContext('2d');
       if (window.tempChart) window.tempChart.destroy();
@@ -108,7 +122,12 @@ function updateTemperatureChart(dashData) {
 
 function updateHumidityChart(humidityData) {
   const humCtx = document.getElementById('humChart');
-  if (!humCtx) return;
+  if (!humCtx) {
+    console.warn('humChart element not found');
+    return;
+  }
+  
+  console.log('Humidity data for chart:', humidityData);
   
   const ctx = humCtx.getContext('2d');
   if (window.humChart) window.humChart.destroy();
