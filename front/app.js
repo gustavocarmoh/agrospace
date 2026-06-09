@@ -34,10 +34,32 @@ async function loadDashboard() {
     const data = await res.json();
     console.log('Dashboard data loaded:', data);
     
-    document.getElementById('m-temp').innerHTML = data.metrics.averageTemperature.value + '<span class="metric-unit">°C</span>';
-    document.getElementById('m-hum').innerHTML = data.metrics.averageHumidity.value + '<span class="metric-unit">%</span>';
-    document.getElementById('m-risk').innerHTML = data.metrics.sectorsAtRisk.count + '<span class="metric-unit"> /' + data.metrics.sectorsAtRisk.total + '</span>';
-    document.getElementById('m-irr').innerHTML = data.metrics.activeIrrigation.activeSectors + '<span class="metric-unit"> set</span>';
+    const tempEl = document.getElementById('m-temp');
+    const humEl = document.getElementById('m-hum');
+    const riskEl = document.getElementById('m-risk');
+    const irrEl = document.getElementById('m-irr');
+    
+    if (!tempEl) console.warn('Element m-temp not found');
+    if (!humEl) console.warn('Element m-hum not found');
+    if (!riskEl) console.warn('Element m-risk not found');
+    if (!irrEl) console.warn('Element m-irr not found');
+    
+    if (tempEl) {
+      tempEl.innerHTML = data.metrics.averageTemperature.value + '<span class="metric-unit">°C</span>';
+      console.log('Updated m-temp to:', data.metrics.averageTemperature.value);
+    }
+    if (humEl) {
+      humEl.innerHTML = data.metrics.averageHumidity.value + '<span class="metric-unit">%</span>';
+      console.log('Updated m-hum to:', data.metrics.averageHumidity.value);
+    }
+    if (riskEl) {
+      riskEl.innerHTML = data.metrics.sectorsAtRisk.count + '<span class="metric-unit"> /' + data.metrics.sectorsAtRisk.total + '</span>';
+      console.log('Updated m-risk to:', data.metrics.sectorsAtRisk.count);
+    }
+    if (irrEl) {
+      irrEl.innerHTML = data.metrics.activeIrrigation.activeSectors + '<span class="metric-unit"> set</span>';
+      console.log('Updated m-irr to:', data.metrics.activeIrrigation.activeSectors);
+    }
     
     updateSectorMap(data.sectorsMap);
     updateTemperatureChart(data);
@@ -53,7 +75,12 @@ async function loadDashboard() {
 
 function updateSectorMap(sectors) {
   const sectorMap = document.querySelector('.sector-map');
-  if (!sectorMap) return;
+  if (!sectorMap) {
+    console.warn('Element .sector-map not found');
+    return;
+  }
+  
+  console.log('Updating sector map with sectors:', sectors);
   
   sectorMap.innerHTML = sectors.map(s => {
     let icon = '🌿', cssClass = 'healthy';
@@ -67,6 +94,8 @@ function updateSectorMap(sectors) {
       <div class="sector-status">${s.label}</div>
     </div>`;
   }).join('');
+  
+  console.log('Sector map updated');
 }
 
 function updateTemperatureChart(dashData) {
@@ -84,7 +113,9 @@ function updateTemperatureChart(dashData) {
       }
       
       const ctx = tempCtx.getContext('2d');
-      if (window.tempChart) window.tempChart.destroy();
+      if (window.tempChart && typeof window.tempChart.destroy === 'function') {
+        window.tempChart.destroy();
+      }
       
       window.tempChart = new Chart(ctx, {
         type: 'line',
@@ -130,7 +161,9 @@ function updateHumidityChart(humidityData) {
   console.log('Humidity data for chart:', humidityData);
   
   const ctx = humCtx.getContext('2d');
-  if (window.humChart) window.humChart.destroy();
+  if (window.humChart && typeof window.humChart.destroy === 'function') {
+    window.humChart.destroy();
+  }
   
   window.humChart = new Chart(ctx, {
     type: 'bar',
@@ -170,52 +203,60 @@ function updateHumidityChart(humidityData) {
   });
 }
 
-function liveData() {
-  loadDashboard();
-}
-setInterval(liveData, 5000);
+// Load dashboard data only on page load
 loadDashboard();
 
 async function loadSensors() {
   try {
+    console.log('Loading sensors...');
     const res = await fetch(`${API_BASE}/sensors`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    console.log('Sensors data loaded:', data);
     
     const sensorGrid = document.querySelector('.sensors-grid');
-    if (sensorGrid) {
-      sensorGrid.innerHTML = data.liveSensors.map(sensor => {
-        let color = '#1ddb8a', icon = '🌡';
-        if (sensor.status === 'CRÍTICO') { color = '#e03a3a'; }
-        else if (sensor.status === 'ALERTA') { color = '#f0a500'; }
-        
-        if (sensor.type === 'UMID') icon = '💧';
-        if (sensor.type === 'pH') icon = '⚗';
-        if (sensor.type === 'LUX') icon = '💡';
-        
-        return `<div class="sensor-card">
-          <div class="sensor-name">${icon} ${sensor.type} — ${sensor.id}</div>
-          <div class="sensor-gauge">
-            <div class="gauge-value" style="color:${color}">${sensor.value}<span style="font-size:15px;color:#5a8ab0">${sensor.unit}</span></div>
-            <div style="font-size:10px;color:#5a8ab0;margin-top:4px;font-family:'Share Tech Mono',monospace">SETOR ${sensor.sector} — ${sensor.status}</div>
-          </div>
-          <div class="gauge-bar"><div class="gauge-fill" style="width:${Math.min(sensor.value, 100)}%;background:${color}"></div></div>
-        </div>`;
-      }).join('');
+    if (!sensorGrid) {
+      console.warn('Element .sensors-grid not found');
+      return;
     }
     
+    sensorGrid.innerHTML = data.liveSensors.map(sensor => {
+      let color = '#1ddb8a', icon = '🌡';
+      if (sensor.status === 'CRÍTICO') { color = '#e03a3a'; }
+      else if (sensor.status === 'ALERTA') { color = '#f0a500'; }
+      
+      if (sensor.type === 'UMID') icon = '💧';
+      if (sensor.type === 'pH') icon = '⚗';
+      if (sensor.type === 'LUX') icon = '💡';
+      
+      return `<div class="sensor-card">
+        <div class="sensor-name">${icon} ${sensor.type} — ${sensor.id}</div>
+        <div class="sensor-gauge">
+          <div class="gauge-value" style="color:${color}">${sensor.value}<span style="font-size:15px;color:#5a8ab0">${sensor.unit}</span></div>
+          <div style="font-size:10px;color:#5a8ab0;margin-top:4px;font-family:'Share Tech Mono',monospace">SETOR ${sensor.sector} — ${sensor.status}</div>
+        </div>
+        <div class="gauge-bar"><div class="gauge-fill" style="width:${Math.min(sensor.value, 100)}%;background:${color}"></div></div>
+      </div>`;
+    }).join('');
+    console.log('Sensors grid updated');
+    
     const devTable = document.getElementById('device-table');
-    if (devTable) {
-      devTable.innerHTML = data.devicesStatus.map(dev => {
-        const statusColor = dev.status === 'ONLINE' ? '#1ddb8a' : dev.status === 'DEGRADADO' ? '#f0a500' : '#e03a3a';
-        return `<tr style="border-bottom:1px solid #0d1625;">
-          <td style="padding:8px 0;color:#c8d8f0;">${dev.id}</td>
-          <td style="padding:8px 0;color:#5a8ab0;">${dev.sector}</td>
-          <td style="padding:8px 0;color:#5a8ab0;">${dev.type}</td>
-          <td style="padding:8px 0;color:#5a8ab0;">${dev.lastRead}</td>
-          <td style="padding:8px 0;"><span style="color:${statusColor};">● ${dev.status}</span></td>
-        </tr>`;
-      }).join('');
+    if (!devTable) {
+      console.warn('Element device-table not found');
+      return;
     }
+    
+    devTable.innerHTML = data.devicesStatus.map(dev => {
+      const statusColor = dev.status === 'ONLINE' ? '#1ddb8a' : dev.status === 'DEGRADADO' ? '#f0a500' : '#e03a3a';
+      return `<tr style="border-bottom:1px solid #0d1625;">
+        <td style="padding:8px 0;color:#c8d8f0;">${dev.id}</td>
+        <td style="padding:8px 0;color:#5a8ab0;">${dev.sector}</td>
+        <td style="padding:8px 0;color:#5a8ab0;">${dev.type}</td>
+        <td style="padding:8px 0;color:#5a8ab0;">${dev.lastRead}</td>
+        <td style="padding:8px 0;"><span style="color:${statusColor};">● ${dev.status}</span></td>
+      </tr>`;
+    }).join('');
+    console.log('Device table updated');
   } catch (e) {
     console.error('Erro ao carregar sensores:', e);
   }
@@ -223,27 +264,38 @@ async function loadSensors() {
 
 async function loadAlerts() {
   try {
+    console.log('Loading alerts...');
     const res = await fetch(`${API_BASE}/alerts`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    console.log('Alerts data loaded:', data);
     
-    document.getElementById('alert-badge').textContent = data.activeAlertsCount;
+    const alertBadge = document.getElementById('alert-badge');
+    if (alertBadge) {
+      alertBadge.textContent = data.activeAlertsCount;
+      console.log('Alert badge updated to:', data.activeAlertsCount);
+    }
     
     const alertsList = document.querySelector('.alerts-list');
-    if (alertsList) {
-      alertsList.innerHTML = data.alerts.map(alert => {
-        let cssClass = 'warn';
-        if (alert.severity === 'CRÍTICO') cssClass = 'danger';
-        if (alert.severity === 'INFO') cssClass = 'ok';
-        
-        return `<div class="alert-item ${cssClass}">
-          <i class="ti ti-alert-triangle alert-icon" aria-hidden="true"></i>
-          <div>
-            <div class="alert-msg"><strong style="color:${alert.severity === 'CRÍTICO' ? '#e03a3a' : alert.severity === 'INFO' ? '#1ddb8a' : '#f0a500'}">${alert.severity}</strong> — ${alert.message}</div>
-            <div class="alert-time">${alert.timestamp} — ${alert.sensorId} — ID #${alert.id}</div>
-          </div>
-        </div>`;
-      }).join('');
+    if (!alertsList) {
+      console.warn('Element .alerts-list not found');
+      return;
     }
+    
+    alertsList.innerHTML = data.alerts.map(alert => {
+      let cssClass = 'warn';
+      if (alert.severity === 'CRÍTICO') cssClass = 'danger';
+      if (alert.severity === 'INFO') cssClass = 'ok';
+      
+      return `<div class="alert-item ${cssClass}">
+        <i class="ti ti-alert-triangle alert-icon" aria-hidden="true"></i>
+        <div>
+          <div class="alert-msg"><strong style="color:${alert.severity === 'CRÍTICO' ? '#e03a3a' : alert.severity === 'INFO' ? '#1ddb8a' : '#f0a500'}">${alert.severity}</strong> — ${alert.message}</div>
+          <div class="alert-time">${alert.timestamp} — ${alert.sensorId} — ID #${alert.id}</div>
+        </div>
+      </div>`;
+    }).join('');
+    console.log('Alerts list updated');
   } catch (e) {
     console.error('Erro ao carregar alertas:', e);
   }
@@ -251,25 +303,32 @@ async function loadAlerts() {
 
 async function loadRecommendations() {
   try {
+    console.log('Loading recommendations...');
     const res = await fetch(`${API_BASE}/ia-manejo/recommendations`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    console.log('Recommendations data loaded:', data);
     
     const recoList = document.getElementById('reco-list');
-    if (recoList) {
-      recoList.innerHTML = data.recommendations.map(rec => {
-        const priorityMap = { URGENTE: 'high', MODERADO: 'mid', NORMAL: 'low' };
-        const priorityClass = priorityMap[rec.priority] || 'mid';
-        
-        return `<div class="reco-item">
-          <div class="reco-priority ${priorityClass}">${rec.priority}</div>
-          <div class="reco-text">
-            <div class="reco-action">${rec.title}</div>
-            <div class="reco-reason">${rec.description}</div>
-            <div class="reco-sector-tag">📍 ${rec.targetSector} · ${rec.sensorId} · Confiança: <span class="reco-confidence">${rec.confidence}%</span></div>
-          </div>
-        </div>`;
-      }).join('');
+    if (!recoList) {
+      console.warn('Element reco-list not found');
+      return;
     }
+    
+    recoList.innerHTML = data.recommendations.map(rec => {
+      const priorityMap = { URGENTE: 'high', MODERADO: 'mid', NORMAL: 'low' };
+      const priorityClass = priorityMap[rec.priority] || 'mid';
+      
+      return `<div class="reco-item">
+        <div class="reco-priority ${priorityClass}">${rec.priority}</div>
+        <div class="reco-text">
+          <div class="reco-action">${rec.title}</div>
+          <div class="reco-reason">${rec.description}</div>
+          <div class="reco-sector-tag">📍 ${rec.targetSector} · ${rec.sensorId} · Confiança: <span class="reco-confidence">${rec.confidence}%</span></div>
+        </div>
+      </div>`;
+    }).join('');
+    console.log('Recommendations list updated');
   } catch (e) {
     console.error('Erro ao carregar recomendações:', e);
   }
